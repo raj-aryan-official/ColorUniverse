@@ -919,11 +919,6 @@ export const mainColors = [
     shades: ['Forest', 'Deep', 'Rich', 'Jade', 'Emerald', 'Olive', 'Moss', 'Pine', 'Hunter', 'Jungle'],
   },
   {
-    name: 'Dark Red',
-    baseHex: '#8B0000',
-    shades: ['Deep', 'Rich', 'Burgundy', 'Maroon', 'Wine', 'Oxblood', 'Garnet', 'Crimson', 'Ruby', 'Mahogany'],
-  },
-  {
     name: 'Deep Pink',
     baseHex: '#FF1493',
     shades: ['Hot', 'Bright', 'Vibrant', 'Magenta', 'Fuchsia', 'Rose', 'Cherry', 'Berry', 'Raspberry', 'Crimson'],
@@ -1202,11 +1197,6 @@ export const mainColors = [
     name: 'Dark Green',
     baseHex: '#006400',
     shades: ['Forest', 'Deep', 'Rich', 'Jade', 'Emerald', 'Olive', 'Moss', 'Pine', 'Hunter', 'Jungle'],
-  },
-  {
-    name: 'Dark Red',
-    baseHex: '#8B0000',
-    shades: ['Deep', 'Rich', 'Burgundy', 'Maroon', 'Wine', 'Oxblood', 'Garnet', 'Crimson', 'Ruby', 'Mahogany'],
   },
 ];
 

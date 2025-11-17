@@ -20,6 +20,7 @@ import {
   Sparkles,
   Sun,
   X,
+  Home,
 } from 'lucide-react';
 import ColorGrid from './components/ColorGrid';
 import {
@@ -28,6 +29,7 @@ import {
   shiftHexColor,
 } from './utils/colorUtils';
 import uiPacks from './utils/uiPacks';
+import homeDesignPacks from './utils/homeDesignPacks';
 
 const TOAST_DURATION = 2000;
 
@@ -54,6 +56,8 @@ function App() {
   const [selectedFamily, setSelectedFamily] = useState(null);
   const [selectedPack, setSelectedPack] = useState(null);
   const [showUIPacks, setShowUIPacks] = useState(false);
+  const [showHomeDesign, setShowHomeDesign] = useState(false);
+  const [selectedDesignPack, setSelectedDesignPack] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [toast, setToast] = useState(null);
   const [surprise, setSurprise] = useState(null);
@@ -107,11 +111,13 @@ function App() {
   );
 
   const getCurrentView = useCallback(() => {
+    if (selectedDesignPack) return 'design-pack-detail';
     if (selectedPack) return 'pack-detail';
     if (selectedFamily) return 'family-detail';
+    if (showHomeDesign) return 'home-design';
     if (showUIPacks) return 'packs-list';
     return 'main';
-  }, [selectedPack, selectedFamily, showUIPacks]);
+  }, [selectedDesignPack, selectedPack, selectedFamily, showHomeDesign, showUIPacks]);
 
   const handleSelectFamily = useCallback((familyName) => {
     const currentView = getCurrentView();
@@ -147,10 +153,24 @@ function App() {
         setShowUIPacks(true);
         setSelectedPack(null);
         setSelectedFamily(null);
+      } else if (previousView === 'home-design') {
+        setShowHomeDesign(true);
+        setSelectedDesignPack(null);
+        setShowUIPacks(false);
+        setSelectedFamily(null);
+        setSelectedPack(null);
+      } else if (previousView === 'design-pack-detail') {
+        setSelectedDesignPack(null);
+        setShowHomeDesign(true);
+        setShowUIPacks(false);
+        setSelectedFamily(null);
+        setSelectedPack(null);
       } else {
         setSelectedFamily(null);
         setSelectedPack(null);
         setShowUIPacks(false);
+        setShowHomeDesign(false);
+        setSelectedDesignPack(null);
       }
       setSearchTerm('');
     } else {
@@ -159,6 +179,8 @@ function App() {
       setSelectedFamily(null);
       setSelectedPack(null);
       setShowUIPacks(false);
+      setShowHomeDesign(false);
+      setSelectedDesignPack(null);
       setSearchTerm('');
     }
   }, [navigationHistory]);
@@ -182,6 +204,34 @@ function App() {
     setShowUIPacks(true);
     setSelectedFamily(null);
     setSelectedPack(null);
+    setShowHomeDesign(false);
+    setSelectedDesignPack(null);
+    setSearchTerm('');
+  }, [getCurrentView]);
+
+  const handleOpenHomeDesign = useCallback(() => {
+    const currentView = getCurrentView();
+    if (currentView !== 'main') {
+      setNavigationHistory((prev) => [...prev, currentView]);
+    }
+    window.history.pushState({ page: 'home-design' }, '', window.location.pathname);
+    setShowHomeDesign(true);
+    setShowUIPacks(false);
+    setSelectedFamily(null);
+    setSelectedPack(null);
+    setSelectedDesignPack(null);
+    setSearchTerm('');
+  }, [getCurrentView]);
+
+  const handleSelectDesignPack = useCallback((packName) => {
+    const currentView = getCurrentView();
+    setNavigationHistory((prev) => [...prev, currentView]);
+    window.history.pushState({ page: 'design-pack', name: packName }, '', window.location.pathname);
+    setSelectedDesignPack(packName);
+    setShowHomeDesign(false);
+    setShowUIPacks(false);
+    setSelectedFamily(null);
+    setSelectedPack(null);
     setSearchTerm('');
   }, [getCurrentView]);
 
@@ -189,6 +239,8 @@ function App() {
     setNavigationHistory([]);
     window.history.pushState({ page: 'main' }, '', window.location.pathname);
     setShowUIPacks(false);
+    setShowHomeDesign(false);
+    setSelectedDesignPack(null);
     setSelectedFamily(null);
     setSelectedPack(null);
     setSearchTerm('');
@@ -254,7 +306,18 @@ function App() {
   );
 
   const handleSurprise = useCallback(() => {
-    if (showUIPacks || selectedPack) {
+    if (showHomeDesign || selectedDesignPack) {
+      // Surprise from Home Design packs
+      if (homeDesignPacks.length === 0) return;
+      const randomPack = homeDesignPacks[Math.floor(Math.random() * homeDesignPacks.length)];
+      setSurprise({
+        type: 'design-pack',
+        pack: randomPack,
+        name: randomPack.name,
+        description: randomPack.description,
+        colors: randomPack.colors,
+      });
+    } else if (showUIPacks || selectedPack) {
       // Surprise from UI packs - show a random UI pack
       if (uiPacks.length === 0) return;
       const randomPack = uiPacks[Math.floor(Math.random() * uiPacks.length)];
@@ -276,7 +339,7 @@ function App() {
         type: 'color',
       });
     }
-  }, [allShades, showUIPacks, selectedPack]);
+  }, [allShades, showUIPacks, selectedPack, showHomeDesign, selectedDesignPack]);
 
   const closeSurprise = useCallback(() => {
     setSurprise(null);
@@ -299,20 +362,52 @@ function App() {
   useEffect(() => {
     if (!topRef.current) return;
     topRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [selectedFamily, selectedPack, showUIPacks]);
+  }, [selectedFamily, selectedPack, showUIPacks, selectedDesignPack]);
 
   // Handle browser back/forward navigation (mobile swipe back)
   useEffect(() => {
     const handlePopState = (event) => {
-      // Prevent default browser back behavior
-      event.preventDefault?.();
-      
-      // Use our navigation history to properly handle back navigation
+      // Handle back navigation
       if (navigationHistory.length > 0) {
-        handleBack();
-      } else if (selectedFamily || selectedPack || showUIPacks) {
+        const previousView = navigationHistory[navigationHistory.length - 1];
+        setNavigationHistory((prev) => prev.slice(0, -1));
+        
+        // Navigate to previous view
+        if (previousView === 'pack-detail') {
+          setSelectedPack(null);
+          setShowUIPacks(true);
+          setSelectedFamily(null);
+        } else if (previousView === 'family-detail') {
+          setSelectedFamily(null);
+          setSelectedPack(null);
+          setShowUIPacks(false);
+        } else if (previousView === 'packs-list') {
+          setShowUIPacks(true);
+          setSelectedPack(null);
+          setSelectedFamily(null);
+        } else if (previousView === 'home-design') {
+          setShowHomeDesign(false);
+          setSelectedFamily(null);
+          setSelectedPack(null);
+          setShowUIPacks(false);
+        } else if (previousView === 'design-pack-detail') {
+          setSelectedDesignPack(null);
+          setShowHomeDesign(true);
+        } else {
+          setSelectedFamily(null);
+          setSelectedPack(null);
+          setShowUIPacks(false);
+          setShowHomeDesign(false);
+        }
+        setSearchTerm('');
+      } else if (selectedFamily || selectedPack || showUIPacks || showHomeDesign) {
         // If we're in a sub-view but no history, go to main
-        handleGoToMain();
+        setSelectedFamily(null);
+        setSelectedPack(null);
+        setShowUIPacks(false);
+        setShowHomeDesign(false);
+        setSelectedDesignPack(null);
+        setSearchTerm('');
       }
     };
 
@@ -326,7 +421,7 @@ function App() {
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [navigationHistory, selectedFamily, selectedPack, showUIPacks, handleBack, handleGoToMain]);
+  }, [navigationHistory, selectedFamily, selectedPack, showUIPacks, showHomeDesign]);
 
   useEffect(() => {
     if (selectedFamily) {
@@ -490,30 +585,68 @@ function App() {
               </button>
             </div>
             <div className="flex w-full items-center gap-2">
-              {showUIPacks || selectedPack ? (
-                <motion.button
-                  type="button"
-                  onClick={handleGoToMain}
-                  whileHover={{ scale: 1.03, y: -1 }}
-                  whileTap={{ scale: 0.97 }}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-tr from-green-600 to-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-300 hover:from-green-500 hover:to-emerald-500 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f4f4f4] dark:from-green-500 dark:to-emerald-500 dark:hover:from-green-400 dark:hover:to-emerald-400 dark:focus-visible:ring-green-200 dark:focus-visible:ring-offset-slate-950"
-                >
-                  <Palette size={18} />
-                  <span>Color Family</span>
-                </motion.button>
+              {showUIPacks || selectedPack || showHomeDesign || selectedDesignPack ? (
+                <>
+                  <motion.button
+                    type="button"
+                    onClick={handleGoToMain}
+                    whileHover={{ scale: 1.03, y: -1 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-tr from-green-600 to-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-300 hover:from-green-500 hover:to-emerald-500 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f4f4f4] dark:from-green-500 dark:to-emerald-500 dark:hover:from-green-400 dark:hover:to-emerald-400 dark:focus-visible:ring-green-200 dark:focus-visible:ring-offset-slate-950"
+                  >
+                    <Palette size={18} />
+                    <span>Color Family</span>
+                  </motion.button>
+                  
+                  {showUIPacks || selectedPack ? (
+                    <motion.button
+                      type="button"
+                      onClick={handleOpenHomeDesign}
+                      whileHover={{ scale: 1.03, y: -1 }}
+                      whileTap={{ scale: 0.97 }}
+                      className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-tr from-blue-600 to-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-300 hover:from-blue-500 hover:to-cyan-500 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f4f4f4] dark:from-blue-500 dark:to-cyan-500 dark:hover:from-blue-400 dark:hover:to-cyan-400 dark:focus-visible:ring-blue-200 dark:focus-visible:ring-offset-slate-950"
+                    >
+                      <Home size={18} />
+                      <span>Home Design</span>
+                    </motion.button>
+                  ) : (
+                    <motion.button
+                      type="button"
+                      onClick={handleOpenUIPacks}
+                      whileHover={{ scale: 1.03, y: -1 }}
+                      whileTap={{ scale: 0.97 }}
+                      className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-tr from-purple-600 to-pink-600 px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-300 hover:from-purple-500 hover:to-pink-500 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f4f4f4] dark:from-purple-500 dark:to-pink-500 dark:hover:from-purple-400 dark:hover:to-pink-400 dark:focus-visible:ring-purple-200 dark:focus-visible:ring-offset-slate-950"
+                    >
+                      <Palette size={18} />
+                      <span>UI Packs</span>
+                    </motion.button>
+                  )}
+                </>
               ) : (
-                <motion.button
-                  type="button"
-                  onClick={handleOpenUIPacks}
-                  whileHover={{ scale: 1.03, y: -1 }}
-                  whileTap={{ scale: 0.97 }}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-tr from-purple-600 to-pink-600 px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-300 hover:from-purple-500 hover:to-pink-500 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f4f4f4] dark:from-purple-500 dark:to-pink-500 dark:hover:from-purple-400 dark:hover:to-pink-400 dark:focus-visible:ring-purple-200 dark:focus-visible:ring-offset-slate-950"
-                >
-                  <Palette size={18} />
-                  <span>UI Packs</span>
-                </motion.button>
+                <>
+                  <motion.button
+                    type="button"
+                    onClick={handleOpenUIPacks}
+                    whileHover={{ scale: 1.03, y: -1 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-tr from-purple-600 to-pink-600 px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-300 hover:from-purple-500 hover:to-pink-500 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f4f4f4] dark:from-purple-500 dark:to-pink-500 dark:hover:from-purple-400 dark:hover:to-pink-400 dark:focus-visible:ring-purple-200 dark:focus-visible:ring-offset-slate-950"
+                  >
+                    <Palette size={18} />
+                    <span>UI Packs</span>
+                  </motion.button>
+                  <motion.button
+                    type="button"
+                    onClick={handleOpenHomeDesign}
+                    whileHover={{ scale: 1.03, y: -1 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-tr from-blue-600 to-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-300 hover:from-blue-500 hover:to-cyan-500 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f4f4f4] dark:from-blue-500 dark:to-cyan-500 dark:hover:from-blue-400 dark:hover:to-cyan-400 dark:focus-visible:ring-blue-200 dark:focus-visible:ring-offset-slate-950"
+                  >
+                    <Home size={18} />
+                    <span>Home Design</span>
+                  </motion.button>
+                </>
               )}
-              {(selectedFamily || selectedPack) && (
+              {(selectedFamily || selectedPack || selectedDesignPack) && (
                 <motion.button
                   type="button"
                   onClick={handleBack}
@@ -532,13 +665,17 @@ function App() {
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder={
-                  selectedPack
-                    ? 'Search color combinations...'
-                    : selectedFamily
-                      ? 'Search shades by name...'
-                      : showUIPacks
-                        ? 'Search UI packs...'
-                        : 'Search color families...'
+                  selectedDesignPack
+                    ? 'Search design colors...'
+                    : selectedPack
+                      ? 'Search color combinations...'
+                      : selectedFamily
+                        ? 'Search shades by name...'
+                        : showUIPacks
+                          ? 'Search UI packs...'
+                          : showHomeDesign
+                            ? 'Search home design packs...'
+                            : 'Search color families...'
                 }
                 className="w-full rounded-full border border-transparent bg-white px-12 py-3 text-sm font-medium text-slate-600 shadow-soft outline-none transition-all duration-200 focus:border-slate-300 focus:bg-white focus:text-slate-800 focus:shadow-glow dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:focus:border-slate-500 dark:focus:bg-slate-900 dark:focus:text-slate-100 dark:focus:shadow-glow"
               />
@@ -548,7 +685,124 @@ function App() {
 
         <LayoutGroup>
           <AnimatePresence mode="wait">
-            {selectedPack && currentPack ? (
+            {selectedDesignPack && homeDesignPacks.find((p) => p.name === selectedDesignPack) ? (
+              <motion.div
+                key="design-pack-detail-view"
+                layout
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -24 }}
+                transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+                className="space-y-8"
+              >
+                <motion.section
+                  layout
+                  className="w-full overflow-hidden rounded-3xl bg-gradient-to-br from-white via-slate-50 to-white p-10 shadow-xl backdrop-blur-lg transition-all duration-300 dark:from-slate-800 dark:via-slate-900 dark:to-slate-800 dark:shadow-2xl"
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  {(() => {
+                    const designPack = homeDesignPacks.find((p) => p.name === selectedDesignPack);
+                    return designPack ? (
+                      <>
+                        <div className="mb-10 space-y-3">
+                          <p className="text-xs font-bold uppercase tracking-[0.4rem] text-amber-600 dark:text-amber-400">
+                            {designPack.category}
+                          </p>
+                          <h2 className="text-4xl font-bold text-slate-900 sm:text-5xl dark:text-slate-50">{designPack.name}</h2>
+                          <p className="max-w-2xl text-base leading-relaxed text-slate-700 dark:text-slate-300">{designPack.description}</p>
+                        </div>
+
+                        <div className="mb-12 space-y-6">
+                          <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Color Palette</h3>
+                          <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-6">
+                            {Object.entries(designPack.colors).map(([key, colorObj]) => {
+                              const baseColor = colorObj.base || colorObj.color || colorObj.hex;
+                              return (
+                                <motion.button
+                                  key={key}
+                                  whileHover={{ scale: 1.08, y: -4 }}
+                                  whileTap={{ scale: 0.96 }}
+                                  onClick={() => handleShadeCopy({ hex: baseColor, name: colorObj.name })}
+                                  className="group flex flex-col items-center gap-3 rounded-2xl p-4 shadow-lg transition-all duration-200 hover:shadow-2xl"
+                                >
+                                  <div
+                                    className="h-24 w-full rounded-xl shadow-md transition-transform duration-200 group-hover:shadow-xl"
+                                    style={{ backgroundColor: baseColor }}
+                                  />
+                                  <span
+                                    className="text-xs font-semibold text-center leading-tight text-slate-900 dark:text-slate-100"
+                                  >
+                                    {colorObj.name}
+                                  </span>
+                                  <span
+                                    className="text-xs font-mono font-bold text-slate-700 dark:text-slate-300"
+                                  >
+                                    {baseColor}
+                                  </span>
+                                </motion.button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <div className="mb-12 space-y-6 border-t border-slate-200 pt-8 dark:border-slate-700">
+                          <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Color Alternatives & Variations</h3>
+                          <div className="space-y-8">
+                            {Object.entries(designPack.colors).map(([key, colorObj]) => (
+                              <div key={key} className="space-y-3">
+                                <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">{colorObj.name}</h4>
+                                <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
+                                  {colorObj.alternatives && colorObj.alternatives.map((altColor, idx) => (
+                                    <motion.button
+                                      key={idx}
+                                      whileHover={{ scale: 1.08, y: -2 }}
+                                      whileTap={{ scale: 0.96 }}
+                                      onClick={() => handleShadeCopy({ hex: altColor, name: `${colorObj.name} ${idx + 1}` })}
+                                      className="group flex flex-col items-center gap-2 rounded-lg p-2 transition-all duration-200 hover:shadow-lg"
+                                      title={`${colorObj.name} ${idx + 1}: ${altColor}`}
+                                    >
+                                      <div
+                                        className="h-16 w-full rounded-lg shadow-sm transition-transform duration-200 hover:shadow-md flex items-center justify-center"
+                                        style={{ backgroundColor: altColor }}
+                                      >
+                                        <span className="text-[9px] font-bold drop-shadow-lg text-center px-1" style={{ color: getReadableTextColor(altColor) }}>
+                                          V{idx + 1}
+                                        </span>
+                                      </div>
+                                      <span className="text-xs font-mono text-slate-700 dark:text-slate-300 font-semibold text-center line-clamp-1">
+                                        {altColor}
+                                      </span>
+                                    </motion.button>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {designPack.rooms && designPack.rooms.length > 0 && (
+                          <div className="border-t border-slate-200 pt-8 dark:border-slate-700">
+                            <h3 className="mb-4 text-lg font-bold text-slate-900 dark:text-slate-100">Perfect For</h3>
+                            <div className="flex flex-wrap gap-3">
+                              {designPack.rooms.map((room) => (
+                                <motion.span 
+                                  key={room} 
+                                  whileHover={{ scale: 1.05 }}
+                                  className="rounded-full bg-gradient-to-r from-amber-100 to-orange-100 px-5 py-2 text-sm font-semibold text-amber-900 shadow-sm transition-all hover:shadow-md dark:from-amber-900 dark:to-orange-900 dark:text-amber-100"
+                                >
+                                  {room}
+                                </motion.span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : null;
+                  })()}
+                </motion.section>
+              </motion.div>
+            ) : selectedPack && currentPack ? (
               <motion.div
                 key="pack-detail-view"
                 layout
@@ -646,6 +900,132 @@ function App() {
                     </div>
                   </div>
                 </motion.section>
+              </motion.div>
+            ) : showHomeDesign ? (
+              <motion.div
+                key="home-design-view"
+                layout
+                initial={false}
+                className="space-y-8"
+              >
+                <motion.section
+                  layout
+                  className="w-full rounded-3xl bg-gradient-to-br from-white via-slate-50 to-white p-8 shadow-xl backdrop-blur-lg transition-all duration-300 dark:from-slate-800 dark:via-slate-900 dark:to-slate-800 md:p-10"
+                  initial={false}
+                >
+                  <div className="mb-8 space-y-3">
+                    <p className="text-xs font-bold uppercase tracking-[0.4rem] text-amber-600 dark:text-amber-400">
+                      Home Design Color Packs
+                    </p>
+                    <h2 className="text-4xl font-bold text-slate-900 sm:text-5xl dark:text-slate-50">Design Your Space</h2>
+                    <p className="max-w-2xl text-lg leading-relaxed text-slate-700 dark:text-slate-300">
+                      Explore 50+ curated color palettes designed for every room. From traditional Indian homes to modern minimalist spaces. Find the perfect palette for your interior or exterior.
+                    </p>
+                  </div>
+                </motion.section>
+                <div className="space-y-12">
+                  {homeDesignPacks.length === 0 ? (
+                    <motion.div
+                      layout
+                      className="col-span-full rounded-3xl border-2 border-dashed border-slate-200 bg-white/60 p-12 text-center text-slate-500 shadow-soft dark:border-slate-600 dark:bg-slate-900/60 dark:text-slate-400"
+                    >
+                      <p className="text-xl font-semibold text-slate-600 dark:text-slate-300">
+                        No design packs found.
+                      </p>
+                    </motion.div>
+                  ) : (
+                    homeDesignPacks.reduce((acc, pack) => {
+                      const categoryIndex = acc.findIndex((item) => item.category === pack.category);
+                      if (categoryIndex === -1) {
+                        acc.push({ category: pack.category, packs: [pack] });
+                      } else {
+                        acc[categoryIndex].packs.push(pack);
+                      }
+                      return acc;
+                    }, []).map((group) => (
+                      <div key={group.category}>
+                        <h3 className="mb-6 text-3xl font-bold text-slate-900 dark:text-slate-100 border-b-2 border-amber-200 pb-3 dark:border-amber-900">{group.category}</h3>
+                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                          {group.packs
+                            .filter((pack) => {
+                              if (!normalizedQuery) return true;
+                              const matchName = pack.name.toLowerCase().includes(normalizedQuery);
+                              const matchDesc = pack.description.toLowerCase().includes(normalizedQuery);
+                              const matchRoom = pack.rooms && pack.rooms.some((room) => room.toLowerCase().includes(normalizedQuery));
+                              return matchName || matchDesc || matchRoom;
+                            })
+                            .map((pack) => (
+                              <motion.button
+                                key={pack.name}
+                                layout
+                                initial={false}
+                                whileHover={{ scale: 1.05, y: -6 }}
+                                whileTap={{ scale: 0.98 }}
+                                transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                                onClick={() => handleSelectDesignPack(pack.name)}
+                                className="group relative overflow-hidden rounded-3xl shadow-lg transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 dark:focus-visible:ring-amber-500 dark:focus-visible:ring-offset-slate-950 hover:shadow-2xl"
+                              >
+                                <div className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-300 mix-blend-overlay" style={{ background: 'radial-gradient(circle at top right, rgba(255,255,255,0.8), transparent 60%)' }} />
+                                
+                                <div className="relative bg-white dark:bg-slate-800 p-0 flex flex-col h-full">
+                                  {/* Color Preview Section */}
+                                  <div className="grid grid-cols-3 gap-0 h-32 overflow-hidden">
+                                    {Object.entries(pack.colors)
+                                      .slice(0, 6)
+                                      .map(([colorKey, colorObj], idx) => {
+                                        const displayColor = colorObj.base || colorObj.color || colorObj.hex || colorObj;
+                                        return (
+                                          <div 
+                                            key={idx} 
+                                            className="h-full w-full transition-transform duration-300 group-hover:scale-110 relative flex flex-col items-center justify-center p-1 hover:bg-black/20"
+                                            style={{ backgroundColor: displayColor }} 
+                                            title={`${colorObj.name}: ${displayColor}`}
+                                          >
+                                            <span className="text-[9px] font-bold drop-shadow-lg text-center" style={{ color: getReadableTextColor(displayColor) }}>
+                                              {colorObj.name}
+                                            </span>
+                                            <span className="text-[7px] font-mono drop-shadow-lg text-center" style={{ color: getReadableTextColor(displayColor) }}>
+                                              {displayColor}
+                                            </span>
+                                          </div>
+                                        );
+                                      })}
+                                  </div>
+                                  
+                                  {/* Info Section */}
+                                  <div className="p-5 flex flex-col justify-between flex-1 bg-white dark:bg-slate-800">
+                                    <div>
+                                      <p className="text-lg font-bold text-slate-900 dark:text-white mb-2 group-hover:text-amber-600 dark:group-hover:text-amber-300 transition-colors">{pack.name}</p>
+                                      <p className="text-sm text-slate-700 dark:text-slate-300 line-clamp-2">{pack.description}</p>
+                                    </div>
+                                    
+                                    {/* Rooms Badge */}
+                                    {pack.rooms && pack.rooms.length > 0 && (
+                                      <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                                        <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-2">Best for:</p>
+                                        <div className="flex flex-wrap gap-1">
+                                          {pack.rooms.slice(0, 2).map((room) => (
+                                            <span key={room} className="text-xs bg-amber-100 text-amber-900 px-2 py-1 rounded-full dark:bg-amber-900/40 dark:text-amber-200 font-medium">
+                                              {room}
+                                            </span>
+                                          ))}
+                                          {pack.rooms.length > 2 && (
+                                            <span className="text-xs bg-slate-200 text-slate-800 px-2 py-1 rounded-full dark:bg-slate-700/60 dark:text-slate-200 font-medium">
+                                              +{pack.rooms.length - 2}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </motion.button>
+                            ))}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </motion.div>
             ) : showUIPacks ? (
               <motion.div
@@ -965,7 +1345,47 @@ function App() {
                   <Sparkles size={16} />
                   Random Discovery
                 </div>
-                {surprise.type === 'ui-pack' ? (
+                {surprise.type === 'design-pack' ? (
+                  <>
+                    <div className="space-y-3">
+                      <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">{surprise.name}</h3>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">{surprise.description}</p>
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        {Object.entries(surprise.colors).map(([key, colorObj]) => {
+                          const baseColor = colorObj.base || colorObj.color || colorObj.hex;
+                          return (
+                            <motion.button
+                              key={key}
+                              type="button"
+                              onClick={() => handleShadeCopy({ hex: baseColor, name: colorObj.name })}
+                              whileHover={{ scale: 1.08, y: -2 }}
+                              whileTap={{ scale: 0.96 }}
+                              className="group flex flex-col items-center gap-2 rounded-xl p-3 shadow-md transition-all duration-200 hover:shadow-lg" 
+                              style={{ backgroundColor: baseColor }}
+                            >
+                              <span className="text-xs font-semibold text-center" style={{ color: getReadableTextColor(baseColor) }}>{colorObj.name}</span>
+                              <span className="text-[10px] font-mono" style={{ color: getReadableTextColor(baseColor) }}>{baseColor}</span>
+                              <Copy size={12} style={{ color: getReadableTextColor(baseColor), opacity: 0.8 }} />
+                            </motion.button>
+                          );
+                        })}
+                      </div>
+                      <motion.button
+                        type="button"
+                        onClick={() => {
+                          closeSurprise();
+                          handleSelectDesignPack(surprise.name);
+                        }}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-600 p-3 text-white shadow-md transition-all duration-200 hover:from-blue-500 hover:to-cyan-500 hover:shadow-lg"
+                      >
+                        <Home size={16} />
+                        <span className="text-sm font-semibold">View Full Pack</span>
+                      </motion.button>
+                    </div>
+                  </>
+                ) : surprise.type === 'ui-pack' ? (
                   <>
                     <div className="space-y-3">
                       <div className="flex h-24 w-full items-center justify-center rounded-2xl shadow-soft" style={{ background: `linear-gradient(135deg, ${surprise.primary}, ${surprise.secondary})` }}>
