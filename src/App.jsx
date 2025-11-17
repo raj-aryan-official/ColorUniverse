@@ -944,8 +944,8 @@ function App() {
                       return acc;
                     }, []).map((group) => (
                       <div key={group.category}>
-                        <h3 className="mb-6 text-3xl font-bold text-slate-900 dark:text-slate-100 border-b-2 border-amber-200 pb-3 dark:border-amber-900">{group.category}</h3>
-                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                        <h3 className="mb-8 text-3xl font-bold text-slate-900 dark:text-slate-100 border-b-2 border-amber-200 pb-4 dark:border-amber-900">{group.category}</h3>
+                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                           {group.packs
                             .filter((pack) => {
                               if (!normalizedQuery) return true;
@@ -969,7 +969,7 @@ function App() {
                                 
                                 <div className="relative bg-white dark:bg-slate-800 p-0 flex flex-col h-full">
                                   {/* Color Preview Section */}
-                                  <div className="grid grid-cols-3 gap-0 h-32 overflow-hidden">
+                                  <div className="grid grid-cols-3 gap-0 h-48 overflow-hidden">
                                     {Object.entries(pack.colors)
                                       .slice(0, 6)
                                       .map(([colorKey, colorObj], idx) => {
@@ -993,16 +993,16 @@ function App() {
                                   </div>
                                   
                                   {/* Info Section */}
-                                  <div className="p-5 flex flex-col justify-between flex-1 bg-white dark:bg-slate-800">
+                                  <div className="p-8 flex flex-col justify-between flex-1 bg-white dark:bg-slate-800 min-h-60">
                                     <div>
-                                      <p className="text-lg font-bold text-slate-900 dark:text-white mb-2 group-hover:text-amber-600 dark:group-hover:text-amber-300 transition-colors">{pack.name}</p>
-                                      <p className="text-sm text-slate-700 dark:text-slate-300 line-clamp-2">{pack.description}</p>
+                                      <p className="text-xl font-bold text-slate-900 dark:text-white mb-3 group-hover:text-amber-600 dark:group-hover:text-amber-300 transition-colors">{pack.name}</p>
+                                      <p className="text-base text-slate-700 dark:text-slate-300 line-clamp-3">{pack.description}</p>
                                     </div>
                                     
                                     {/* Rooms Badge */}
                                     {pack.rooms && pack.rooms.length > 0 && (
-                                      <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-                                        <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-2">Best for:</p>
+                                      <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+                                        <p className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-3">Best for:</p>
                                         <div className="flex flex-wrap gap-1">
                                           {pack.rooms.slice(0, 2).map((room) => (
                                             <span key={room} className="text-xs bg-amber-100 text-amber-900 px-2 py-1 rounded-full dark:bg-amber-900/40 dark:text-amber-200 font-medium">
